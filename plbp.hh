@@ -36,6 +36,7 @@ class Plbp : public BPredUnit
     unsigned globalHistoryMask;
     unsigned trainThreashold;
     unsigned globalAddrHead;
-    std::vector<Addr> globalAddr;
+    std::vector<unsigned> globalAddrHead;
+    std::vector<vector<Addr>> globalAddr;
     std::vector<std::vector<std::vector<uint8_t>> w;
 }
