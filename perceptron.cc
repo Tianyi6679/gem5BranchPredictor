@@ -23,7 +23,7 @@ void Perceptron::uncondBranch(ThreadID tid, Addr pc, void* &bp_history){
     history->globalTakenPred = true;
     history->globalUsed = true;
     bp_history = static_cast<void*>(history);
-    updateGlobalHistReg(tid, true);
+    //updateGlobalHistReg(tid, true);
 }
 
 void Perceptron::squash(ThreadID tid, void *bp_history) const{
@@ -55,7 +55,8 @@ bool Perceptron::lookup(ThreadID tid, Addr branch_addr, void* &bp_history){
     history->globalHistoryReg = globalHistoryReg[tid];
     history->globalTakenPred = taken;
     bp_history = static_cast<void*>(history);
-    updateGlobalHistReg(tid, taken);
+    //we only update in update func call
+    //updateGlobalHistReg(tid, taken);
     return taken;
 }
 
@@ -66,10 +67,10 @@ void Perceptron::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 
 void Perceptron::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history, bool squashed){
     assert(bp_history);
-
+    
     int tableIndex = branch_addr % numOfPerceptron;
     unsigned thread_history = globalHistoryReg[tid];
-
+    
     //training algorithm
     if (squashed || (abs(sum) <= trainThreashold)){
         if (taken) w[tableIndex][0] += 1;
@@ -83,7 +84,6 @@ void Perceptron::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_his
             }
         }
     }
-
     updateGlobalHistReg(tid, taken);
 }
 
