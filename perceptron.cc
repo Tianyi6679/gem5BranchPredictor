@@ -23,7 +23,7 @@ void Perceptron::uncondBranch(ThreadID tid, Addr pc, void* &bp_history){
     history->globalTakenPred = true;
     history->globalUsed = true;
     bp_history = static_cast<void*>(history);
-    //updateGlobalHistReg(tid, true);
+    updateGlobalHistReg(tid, true);
 }
 
 void Perceptron::squash(ThreadID tid, void *bp_history) const{
@@ -55,8 +55,8 @@ bool Perceptron::lookup(ThreadID tid, Addr branch_addr, void* &bp_history){
     history->globalHistoryReg = globalHistoryReg[tid];
     history->globalTakenPred = taken;
     bp_history = static_cast<void*>(history);
-    //we only update in update func call
-    //updateGlobalHistReg(tid, taken);
+    
+    updateGlobalHistReg(tid, taken);
     return taken;
 }
 
@@ -69,10 +69,27 @@ void Perceptron::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_his
     assert(bp_history);
     
     int tableIndex = branch_addr % numOfPerceptron;
-    unsigned thread_history = globalHistoryReg[tid];
+    BPHistory *history = static_cast<BPHistory*>(bp_history);
+    history->globalHistoryReg;
     
+    if (squashed){
+        globalHistoryReg[tid] = history->globalHistoryReg;
+    }
+
+    unsigned thread_history = globalHistoryReg[tid];
+    int bias = w[tableIndex][0];
+    int dot_product = 0;
+    for (int i = 1; i<=globalPredictionSize; i++){
+        // y += x_i*w_i
+        if ((thread_history >> (i-1)) & 1 ){
+            dot_product += w[tableIndex][i]; 
+        }
+        else{
+            dot_product -= w[tableIndex][i]; 
+        }
+    }
     //training algorithm
-    if (squashed || (abs(sum) <= trainThreashold)){
+    if (squashed || (abs(dot_product+bias) <= trainThreashold)){
         if (taken) w[tableIndex][0] += 1;
         else w[tableIndex][0] += -1;
         for (int i = 1; i<=globalPredictionSize; i++){
@@ -87,9 +104,8 @@ void Perceptron::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_his
     updateGlobalHistReg(tid, taken);
 }
 
-unsigned Perceptron::getGHR(ThreadID tid, void *bp_history) const
-{
-  return static_cast<BPHistory *>(bp_history)->globalHistoryReg;
+unsigned Perceptron::getGHR(ThreadID tid, void *bp_history) const{
+    return static_cast<BPHistory *>(bp_history)->globalHistoryReg;
 }
 
 void Perceptron::updateGlobalHistReg(ThreadID tid, bool taken){
@@ -97,9 +113,8 @@ void Perceptron::updateGlobalHistReg(ThreadID tid, bool taken){
     globalHistoryReg[tid] &= historyRegisterMask;
 }
 
-Perceptron* PerceptronParams::create()
-{
-  return new Perceptron(this);
+Perceptron* PerceptronParams::create(){
+    return new Perceptron(this);
 }
 
 

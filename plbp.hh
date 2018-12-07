@@ -26,7 +26,7 @@ class Plbp : public BPredUnit
         Addr branch_addr;
         bool globalTakenPred;
         bool globalUsed;
-    }
+    };
 
     unsigned globalRegisterMask;
     unsigned globalPredictionSize;
@@ -39,4 +39,6 @@ class Plbp : public BPredUnit
     std::vector<unsigned> globalAddrHead;
     std::vector<vector<Addr>> globalAddr;
     std::vector<std::vector<std::vector<uint8_t>> w;
-}
+};
+
+#endif

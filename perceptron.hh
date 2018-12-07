@@ -24,7 +24,7 @@ class Perceptron : public BPredUnit
         unsigned globalHistoryReg;
         bool globalTakenPred;
         bool globalUsed;
-    }
+    };
 
     unsigned globalRegisterMask;
     unsigned globalPredictionSize;
@@ -36,4 +36,6 @@ class Perceptron : public BPredUnit
     unsigned trainThreashold;
     //weight vectors
     std::vector<std::vector<unsigned>> w;
-}
+};
+
+#endif
