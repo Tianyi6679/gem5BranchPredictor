@@ -1,0 +1,32 @@
+diff --git a/src/cpu/pred/BranchPredictor.py b/src/cpu/pred/BranchPredictor.py
+index 1b400c2..f24f0e6 100644
+--- a/src/cpu/pred/BranchPredictor.py
++++ b/src/cpu/pred/BranchPredictor.py
+@@ -102,3 +102,14 @@ class LTAGE(BranchPredictor):
+     maxHist = Param.Unsigned(640, "Maximum history size of LTAGE")
+     minTagWidth = Param.Unsigned(7, "Minimum tag size in tag tables")
+ 
++class Perceptron(BranchPredictor):
++    type = 'Perceptron'
++    cxx_class = 'Perceptron'
++    cxx_header = "cpu/pred/perceptron.hh"
++    globalPredictorSize = Param.Unsigned(8192, "Size of global predictor")
++
++class Plbp(BranchPredictor):
++    type = 'Plbp'
++    cxx_class = 'Plbp'
++    cxx_header = "cpu/pred/plbp.hh"
++    globalPredictorSize = Param.Unsigned(8192, "Size of global predictor")
+diff --git a/src/cpu/pred/SConscript b/src/cpu/pred/SConscript
+index 1cdf7bb..792dd5b 100644
+--- a/src/cpu/pred/SConscript
++++ b/src/cpu/pred/SConscript
+@@ -44,6 +44,8 @@ Source('ras.cc')
+ Source('tournament.cc')
+ Source ('bi_mode.cc')
+ Source('ltage.cc')
++Source('perceptron.cc')
++Source('plbp.cc')
+ DebugFlag('FreeList')
+ DebugFlag('Branch')
+ DebugFlag('LTage')

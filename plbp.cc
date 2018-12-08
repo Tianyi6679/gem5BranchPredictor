@@ -9,19 +9,19 @@
 
 Plbp::Plbp(const PlbpParams* params)
     : BPredUnit(params),
-        globalHistoryBits(ceilLog2(params->globalPredictionSize)),
-        globalPredictionSize(params->globalPredictionSize),
+        globalHistoryBits(ceilLog2(params->globalPredictorSize)),
+        globalPredictionSize(params->globalPredictorSize),
         globalHistoryReg(params->numThreads, 0),
         globalAddrHead(params->numThreads, 0),
-        globalAddr(params->numThreads, std::vector(params->globalPredictionSize,0)){
+        globalAddr(params->numThreads, std::vector<Addr>(params->globalPredictorSize,0)){
     if (!isPowerOf2(globalPredictionSize)){
         fatal("Invalid global predictor size! \n");
     }
-    histroyRegisterMask = mask(globalHistoryBits);
+    historyRegisterMask = mask(globalHistoryBits);
     trainThreashold = 1.93*globalPredictionSize + 14;
     w.assign(N, 
-            std::vector<std::vector>(M , 
-                    std::vector<uint8_t>(globalPredictionSize + 1, 0)));
+	     std::vector<std::vector<int8_t>>(M , 
+                    std::vector<int8_t>(globalPredictionSize + 1, 0)));
 }
 
 void Plbp::uncondBranch(ThreadID tid, Addr pc, void* &bp_history){
@@ -30,13 +30,13 @@ void Plbp::uncondBranch(ThreadID tid, Addr pc, void* &bp_history){
     history->globalHistoryReg = globalHistoryReg[tid];
     history->globalTakenPred = true;
     history->globalUsed = true;
-    histoty->branch_addr = globalAddr[head];
+    history->branch_addr = globalAddr[tid][head];
     history->addrHead = head;
     bp_history = static_cast<void*>(history);
     updateGlobalHistReg(tid, pc, true);
 }
 
-void Plbp::squash(ThreadID tid, void *bp_history) const{
+void Plbp::squash(ThreadID tid, void *bp_history){
     BPHistory *history = static_cast<BPHistory*>(bp_history);
     globalHistoryReg[tid] = history->globalHistoryReg;
     globalAddrHead[tid] = history->addrHead;
@@ -52,7 +52,7 @@ bool Plbp::lookup(ThreadID tid, Addr branch_addr, void* &bp_history){
     int dot_product = 0;
     for (int i = 1; i<=globalPredictionSize; i++){
         int globalAddrIndex = ((head - (i-1)) % globalPredictionSize + globalPredictionSize) % globalPredictionSize;
-        int addr = globalAddr[globalAddrIndex] % M;
+        int addr = globalAddr[tid][globalAddrIndex] % M;
         if ((thread_history >> (i-1)) & 1 ){
             dot_product += w[tableIndex][addr][i]; 
         }
@@ -66,7 +66,7 @@ bool Plbp::lookup(ThreadID tid, Addr branch_addr, void* &bp_history){
     BPHistory *history = new BPHistory;
     history->globalHistoryReg = globalHistoryReg[tid];
     history->globalTakenPred = taken;
-    histoty->branch_addr = globalAddr[head];
+    history->branch_addr = globalAddr[tid][head];
     history->addrHead = head;
     bp_history = static_cast<void*>(history);
     updateGlobalHistReg(tid, branch_addr, taken);
@@ -75,7 +75,7 @@ bool Plbp::lookup(ThreadID tid, Addr branch_addr, void* &bp_history){
 
 void Plbp::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
-    globalHistory[tid] &= (historyRegisterMask & ~ULL(1));
+    globalHistoryReg[tid] &= (historyRegisterMask & ~ULL(1));
 }
 
 void Plbp::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history, bool squashed){
@@ -83,8 +83,8 @@ void Plbp::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history, 
 
     BPHistory *history = static_cast<BPHistory*>(bp_history);
     int tableIndex = branch_addr % N;
-    if (squahsed){
-        globalHistoryReg[tid] = history->globalHistory;
+    if (squashed){
+        globalHistoryReg[tid] = history->globalHistoryReg;
         globalAddrHead[tid] = history->addrHead;
         globalAddr[tid][globalAddrHead[tid]] = history->branch_addr;
     }
@@ -95,7 +95,7 @@ void Plbp::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history, 
     int dot_product = 0;
     for (int i = 1; i<=globalPredictionSize; i++){
         int globalAddrIndex = ((head - (i-1)) % globalPredictionSize + globalPredictionSize) % globalPredictionSize;
-        int addr = globalAddr[globalAddrIndex] % M;
+        int addr = globalAddr[tid][globalAddrIndex] % M;
         if ((thread_history >> (i-1)) & 1 ){
             dot_product += w[tableIndex][addr][i]; 
         }
@@ -109,7 +109,7 @@ void Plbp::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history, 
         else w[tableIndex][0][0] -= (w[tableIndex][0][0] > MIN_WEIGHT) ? 1:0;
         for (int i = 1; i<=globalPredictionSize; i++){
             int globalAddrIndex = ((head - (i-1)) % globalPredictionSize + globalPredictionSize) % globalPredictionSize;
-            int addr = globalAddr[globalAddrIndex] % M;
+            int addr = globalAddr[tid][globalAddrIndex] % M;
             if (((thread_history >> (i-1)) & 1) == taken ){
                 w[tableIndex][addr][i] += (w[tableIndex][addr][i] < MAX_WEIGHT) ? 1:0; 
             }
