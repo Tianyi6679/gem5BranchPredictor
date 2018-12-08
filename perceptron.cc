@@ -5,16 +5,16 @@
 
 Perceptron::Perceptron(const PerceptronParams* params)
     : BPredUnit(params),
-        globalHistoryBits(ceilLog2(params->globalPredictionSize)),
-        globalPredictionSize(params->globalPredictionSize),
+        globalHistoryBits(ceilLog2(params->globalPredictorSize)),
+        globalPredictionSize(params->globalPredictorSize),
         globalHistoryReg(params->numThreads, 0){
     if (!isPowerOf2(globalPredictionSize)){
         fatal("Invalid global predictor size! \n");
     }
-    histroyRegisterMask = mask(globalHistoryBits);
-    numOfPerceptron = 20;
+    historyRegisterMask = mask(globalHistoryBits);
+    numOfPerceptrons = 20;
     trainThreashold = 1.93*globalPredictionSize + 14;
-    w.assign(numOfPerceptron, std::vector<unsigned>(globalPredictionSize+1 , 0));
+    w.assign(numOfPerceptrons, std::vector<unsigned>(globalPredictionSize+1 , 0));
 }
 
 void Perceptron::uncondBranch(ThreadID tid, Addr pc, void* &bp_history){
@@ -26,7 +26,7 @@ void Perceptron::uncondBranch(ThreadID tid, Addr pc, void* &bp_history){
     updateGlobalHistReg(tid, true);
 }
 
-void Perceptron::squash(ThreadID tid, void *bp_history) const{
+void Perceptron::squash(ThreadID tid, void *bp_history){
     BPHistory *history = static_cast<BPHistory*>(bp_history);
     globalHistoryReg[tid] = history->globalHistoryReg;
 
@@ -34,7 +34,7 @@ void Perceptron::squash(ThreadID tid, void *bp_history) const{
 }
 
 bool Perceptron::lookup(ThreadID tid, Addr branch_addr, void* &bp_history){
-    int tableIndex = branch_addr % numOfPerceptron;
+    int tableIndex = branch_addr % numOfPerceptrons;
     unsigned thread_history = globalHistoryReg[tid];
 
     int bias = w[tableIndex][0];
@@ -62,15 +62,14 @@ bool Perceptron::lookup(ThreadID tid, Addr branch_addr, void* &bp_history){
 
 void Perceptron::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
-    globalHistory[tid] &= (historyRegisterMask & ~ULL(1));
+    globalHistoryReg[tid] &= (historyRegisterMask & ~ULL(1));
 }
 
 void Perceptron::update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history, bool squashed){
     assert(bp_history);
     
-    int tableIndex = branch_addr % numOfPerceptron;
+    int tableIndex = branch_addr % numOfPerceptrons;
     BPHistory *history = static_cast<BPHistory*>(bp_history);
-    history->globalHistoryReg;
     
     if (squashed){
         globalHistoryReg[tid] = history->globalHistoryReg;
